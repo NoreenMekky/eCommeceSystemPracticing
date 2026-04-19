@@ -232,6 +232,70 @@ ORDER BY total_units_sold DESC
 LIMIT 5;
 ```
 
+#### Alternative Approach 1 — Window Function with `ROW_NUMBER()`
+
+Assigns a unique rank per month; ties get different row numbers (no shared ranks).
+
+![Q2 ROW_NUMBER Result](q2-rowNum.png)
+
+```sql
+WITH products_sales AS (
+    SELECT
+        od.product_id,
+        p.name,
+        SUM(od.quantity)    AS number_of_sales,
+        MONTH(o.order_date) AS reported_month,
+        YEAR(o.order_date)  AS reported_year
+    FROM ecommerce_db.order_details od
+    JOIN ecommerce_db.orders  o ON o.order_id  = od.order_id
+    JOIN ecommerce_db.product p ON p.product_id = od.product_id
+    GROUP BY od.product_id, p.name, reported_month, reported_year
+),
+ranked_sales AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (PARTITION BY reported_month, reported_year ORDER BY number_of_sales DESC) AS row_num
+    FROM products_sales
+)
+SELECT *
+FROM ranked_sales
+WHERE row_num <= 5
+ORDER BY reported_month, reported_year, number_of_sales DESC;
+```
+
+#### Alternative Approach 2 — Window Function with `DENSE_RANK()`
+
+Assigns shared ranks for tied values; no gaps in rank numbers, so more than 5 rows can appear if ties exist at rank 5.
+
+![Q2 DENSE_RANK Result](q2-denseRank.png)
+
+```sql
+WITH products_sales AS (
+    SELECT
+        od.product_id,
+        p.name,
+        SUM(od.quantity)    AS number_of_sales,
+        MONTH(o.order_date) AS reported_month,
+        YEAR(o.order_date)  AS reported_year
+    FROM ecommerce_db.order_details od
+    JOIN ecommerce_db.orders  o ON o.order_id  = od.order_id
+    JOIN ecommerce_db.product p ON p.product_id = od.product_id
+    GROUP BY od.product_id, p.name, reported_month, reported_year
+),
+ranked_sales AS (
+    SELECT
+        *,
+        DENSE_RANK() OVER (PARTITION BY reported_month, reported_year ORDER BY number_of_sales DESC) AS row_num
+    FROM products_sales
+)
+SELECT *
+FROM ranked_sales
+WHERE row_num <= 5
+ORDER BY reported_month, reported_year, number_of_sales DESC;
+```
+
+> **`ROW_NUMBER` vs `DENSE_RANK`:** Use `ROW_NUMBER` when you need exactly N results per partition. Use `DENSE_RANK` when tied products should share the same rank and all ties should be included.
+
 ---
 
 ### Q3 — Customers with Orders Totaling More Than $500 in the Past Month
@@ -277,5 +341,3 @@ JOIN ecommerce_db.customer c ON c.customer_id = o.customer_id;
 SELECT first_name, last_name, total_amount
 FROM ecommerce_db.orders;
 ```
-
-> **Trade-off:** Faster reads with fewer joins, but data is duplicated — any update to a customer's name or email must be reflected in all their order rows.
