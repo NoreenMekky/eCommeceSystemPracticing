@@ -231,3 +231,51 @@ GROUP BY p.product_id, p.name, month_reported, year_reported
 ORDER BY total_units_sold DESC
 LIMIT 5;
 ```
+
+---
+
+### Q3 — Customers with Orders Totaling More Than $500 in the Past Month
+
+Retrieve a list of customers who have placed orders totaling more than $500 in the past month, including their names and total order amounts.
+
+![Q3 Result](q3.png)
+
+```sql
+SELECT
+    c.first_name,
+    c.last_name,
+    SUM(o.total_amount) AS total_order_amount,
+    MONTH(o.order_date) AS reported_month,
+    YEAR(o.order_date)  AS reported_year
+FROM ecommerce_db.customer c
+JOIN ecommerce_db.orders o ON c.customer_id = o.customer_id
+WHERE MONTH(o.order_date) = MONTH(CURRENT_DATE()) - 1
+GROUP BY 1, 2, 4, 5
+HAVING total_order_amount > 500;
+```
+
+---
+
+## Denormalization
+
+### How to apply a denormalization mechanism on the `customer` and `orders` entities?
+
+By adding `first_name`, `last_name`, and `email` (if needed) from the `customer` table directly into the `orders` table, so that most customer-orders related queries no longer require a JOIN with the `customer` table.
+
+**Before (normalized):**
+
+```sql
+SELECT c.first_name, c.last_name, o.total_amount
+FROM ecommerce_db.orders o
+JOIN ecommerce_db.customer c ON c.customer_id = o.customer_id;
+```
+
+**After (denormalized `orders` table):**
+
+```sql
+-- orders table would include: first_name, last_name, email columns
+SELECT first_name, last_name, total_amount
+FROM ecommerce_db.orders;
+```
+
+> **Trade-off:** Faster reads with fewer joins, but data is duplicated — any update to a customer's name or email must be reflected in all their order rows.
