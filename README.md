@@ -320,6 +320,30 @@ HAVING total_order_amount > 500;
 
 ---
 
+## Denormalization
+
+### How to apply a denormalization mechanism on the `customer` and `orders` entities?
+
+By adding `first_name`, `last_name`, and `email` (if needed) from the `customer` table directly into the `orders` table, so that most customer-orders related queries no longer require a JOIN with the `customer` table.
+
+**Before (normalized):**
+
+```sql
+SELECT c.first_name, c.last_name, o.total_amount
+FROM ecommerce_db.orders o
+JOIN ecommerce_db.customer c ON c.customer_id = o.customer_id;
+```
+
+**After (denormalized `orders` table):**
+
+```sql
+-- orders table would include: first_name, last_name, email columns
+SELECT first_name, last_name, total_amount
+FROM ecommerce_db.orders;
+```
+
+---
+
 ## Week 4
 
 ### Query 1 — Search Products Containing "camera" in Name or Description
@@ -367,28 +391,4 @@ GROUP BY
     p.name,
     c.name
 ORDER BY totalProductPurchase DESC;
-```
-
----
-
-## Denormalization
-
-### How to apply a denormalization mechanism on the `customer` and `orders` entities?
-
-By adding `first_name`, `last_name`, and `email` (if needed) from the `customer` table directly into the `orders` table, so that most customer-orders related queries no longer require a JOIN with the `customer` table.
-
-**Before (normalized):**
-
-```sql
-SELECT c.first_name, c.last_name, o.total_amount
-FROM ecommerce_db.orders o
-JOIN ecommerce_db.customer c ON c.customer_id = o.customer_id;
-```
-
-**After (denormalized `orders` table):**
-
-```sql
--- orders table would include: first_name, last_name, email columns
-SELECT first_name, last_name, total_amount
-FROM ecommerce_db.orders;
 ```
