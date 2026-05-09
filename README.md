@@ -320,6 +320,57 @@ HAVING total_order_amount > 500;
 
 ---
 
+## Week 4
+
+### Query 1 — Search Products Containing "camera" in Name or Description
+
+Write a SQL query to return all products where the word **camera** appears in either the product name or the description (case sensitivity depends on your MySQL collation).
+
+![Week 4 Query 1 Result](s4q1.png)
+
+```sql
+SELECT *
+FROM ecommerce.Products p
+WHERE p.name LIKE '%camera%'
+   OR p.description LIKE '%camera%';
+```
+
+---
+
+### Query 2 — Popular Products in the Same Category (Exclude Already Purchased)
+
+Design a query that recommends popular products in a given category for a specific customer: rank items by total units sold across all orders, but exclude any product that customer has already purchased. The example below uses category **Lenses** and customer **`customer_id = 1`**; change those filters for other categories or customers.
+
+![Week 4 Query 2 Result](s4q2.png)
+
+```sql
+SELECT
+    p.product_id,
+    p.name AS product_name,
+    c.name AS category_name,
+    SUM(od.quantity) AS totalProductPurchase
+FROM Products p
+JOIN Categories c
+    ON p.category_id = c.category_id
+JOIN OrderDetails od
+    ON p.product_id = od.product_id
+WHERE c.name = 'Lenses'
+  AND p.product_id NOT IN (
+      SELECT od2.product_id
+      FROM OrderDetails od2
+      JOIN Orders o2
+          ON od2.order_id = o2.order_id
+      WHERE o2.customer_id = 1
+  )
+GROUP BY
+    p.product_id,
+    p.name,
+    c.name
+ORDER BY totalProductPurchase DESC;
+```
+
+---
+
 ## Denormalization
 
 ### How to apply a denormalization mechanism on the `customer` and `orders` entities?
