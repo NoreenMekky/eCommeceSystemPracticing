@@ -3,6 +3,23 @@
 A simple eCommerce database built with MySQL for learning and practicing SQL queries.
 This project covers schema design, relational modeling, dummy data insertion, and analytical reporting queries.
 
+## Table of Contents
+
+- [DB Schema](#db-schema)
+- [Creating the Database](#creating-the-database)
+- [Filling the DB with Dummy Data](#filling-the-db-with-dummy-data)
+- [Practice Queries](#practice-queries)
+  - [Q1 — Daily Revenue Report](#q1--daily-revenue-report)
+  - [Q2 — Monthly Top-Selling Products Report](#q2--monthly-top-selling-products-report)
+  - [Q3 — Customers with Orders Totaling More Than $500 in the Past Month](#q3--customers-with-orders-totaling-more-than-500-in-the-past-month)
+- [Denormalization](#denormalization)
+- [Week 4](#week-4)
+  - [Query 1 — Search Products Containing "camera"](#query-1--search-products-containing-camera-in-name-or-description)
+  - [Query 2 — Popular Products in the Same Category](#query-2--popular-products-in-the-same-category-exclude-already-purchased)
+- [Week 5 — Row Locks](#week-5--row-locks)
+  - [Lock 1 — Lock `stock_quantity` for product_id = 211](#lock-1--lock-stock_quantity-for-product_id--211)
+  - [Lock 2 — Lock entire row for product_id = 211](#lock-2--lock-entire-row-for-product_id--211)
+
 ---
 
 ## DB Schema
@@ -392,3 +409,47 @@ GROUP BY
     c.name
 ORDER BY totalProductPurchase DESC;
 ```
+
+---
+
+## Week 5 — Row Locks
+
+Row-level locking in MySQL uses `SELECT ... FOR UPDATE` inside a transaction. The lock is held until you `COMMIT` or `ROLLBACK`, which blocks other sessions from updating (or locking) that row until the transaction ends.
+
+### Lock 1 — Lock `stock_quantity` for product_id = 211
+
+Lock only the `stock_quantity` column (quantity) for the product row with `product_id = 211` so it cannot be updated by another transaction while this one is open.
+
+![Week 5 Lock 1 Result](lock1.png)
+
+```sql
+START TRANSACTION;
+
+SELECT p.stock_quantity
+FROM ecommerce.Products p
+WHERE p.product_id = 211
+FOR UPDATE;
+
+COMMIT;
+```
+
+---
+
+### Lock 2 — Lock entire row for product_id = 211
+
+Lock the full product row with `product_id = 211` so no column on that row can be updated by another transaction until this transaction completes.
+
+![Week 5 Lock 2 Result](lock2.png)
+
+```sql
+START TRANSACTION;
+
+SELECT *
+FROM ecommerce.Products p
+WHERE p.product_id = 211
+FOR UPDATE;
+
+COMMIT;
+```
+
+> **Note:** In InnoDB, `FOR UPDATE` always locks the entire row, not individual columns. Selecting only `stock_quantity` (Lock 1) still acquires a row lock; the difference is what data you read back, not which parts of the row are protected.
